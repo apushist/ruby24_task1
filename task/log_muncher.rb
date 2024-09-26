@@ -12,7 +12,7 @@ class BKTree
 
   def add(name, vote = 1)
     if @root.nil?
-      @root = BKNode.new(name)
+      @root = BKNode.new(name, vote)
     else
       @root.add(name, vote)
     end
@@ -68,57 +68,31 @@ class BKTree
         @children[distance].add(name, vote)
       end
     end
-
-
-    def search(name, max_distance, results)
-      distance = levenshtein_distance(@name, name)
-  
-      if distance <= max_distance
-        results << "#{@name} - #{@votes}"
-      end
-  
-      (@children.keys.select { |d| (d - distance).abs <= max_distance }).each do |d|
-        @children[d].search(name, max_distance, results)
-      end
-    end
     
     def analyze(max_distance, results, unique_nodes)
       
       if votes > 0
-        #unless unique_nodes.include?(@name) 
+        unless unique_nodes.include?(@name) 
+          
           unique_nodes.add(@name)
           results[@name] ||= 0
           results[@name] += @votes
-        #end
+        end
 
-        # analyze_sibling_nodes(max_distance, results, unique_nodes)
 
         (@children.keys.select { |d| d <= max_distance }).each do |d|
           child_node = @children[d]
           results[@name] += child_node.votes
+          
           child_node.votes = 0
-          child_node.analyze(max_distance, results, unique_nodes) unless unique_nodes.include?(child_node.name)
+          #child_node.analyze(max_distance, results, unique_nodes) unless unique_nodes.include?(child_node.name)
         end
-      end  
+      end        
       @children.each_value do |child|
         child.analyze(max_distance, results, unique_nodes)
       end
-    end
 
-    # def analyze_sibling_nodes(max_distance, results, unique_nodes)
-    #   return unless parent
-
-    #   parent.children.each_value do |sibling|
-    #     next if sibling.name == @name 
-
-    #     distance = levenshtein_distance_cached(sibling.name)
-    #     if distance <= max_distance && !unique_nodes.include?(sibling.name)
-    #       unique_nodes.add(sibling.name)
-    #       results[sibling.name] ||= 0
-    #       results[sibling.name] += sibling.votes
-    #     end
-    #   end
-    # end
+    end    
   end
 end
 
@@ -128,25 +102,33 @@ begin_time = Time.now
 
 File.foreach("data/log.txt"){
   |line|
-  name = line[line.index('>')+2...line.length-2]
+  name = line[line.index('>')+2...line.length-2].gsub(/[a-zA-Z]/, '')
   
   bk_tree.add(name)
 }
 
 puts "Added in tree in #{Time.now - begin_time} s"
 middle_time = Time.now
-results = bk_tree.analyze(8)
+results = bk_tree.analyze(4)
 results = results.sort()
+# sum = 0
+# results.each do |name, votes|
+#   sum += votes
+# end
+# puts "Sum after analyze #{sum}"
+# puts results.size
 
-while results.size > 200
+while results.size > 3376
   bk_tree = BKTree.new
-  sum = 0
-  results.each do |name, votes|
-    sum += votes
+  results.each do |name, votes|    
     bk_tree.add(name,votes)
   end
-  puts "Sum #{sum}"
-  results = bk_tree.analyze(8)
+  # sum = 0
+  results = bk_tree.analyze(4)
+  # results.each do |name, votes|
+  #   sum += votes
+  # end
+  # puts "Sum after analyze #{sum}"
   results = results.sort_by{|key,value|-value}
   puts results.size
 end
